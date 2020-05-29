@@ -91,6 +91,7 @@ public class Simulation {
         }
         this.board = newBoard;
     }
+
     public static void main(String[] args) {
         Simulation simulation = new Simulation(8, 10);
 
