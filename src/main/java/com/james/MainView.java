@@ -3,11 +3,11 @@ package com.james;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.control.Button;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.input.MouseDragEvent;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Affine;
@@ -15,69 +15,77 @@ import javafx.scene.transform.NonInvertibleTransformException;
 
 public class MainView extends VBox {
 
-    private Button stepButton;
     private Canvas canvas;
     private Simulation simulation;
+    private InfoBar infoBar;
 
     private Affine affine;
     
-    private int drawMode = 1;
-
-    private int[] lastCellClicked = {-1, -1};
-
+    private int drawMode = Simulation.ALIVE;
 
     public MainView() {
-        stepButton = new Button("step");
-        this.stepButton.setOnAction(actionEvent -> {
-            simulation.step();
-            draw();
-        });
         this.canvas = new Canvas(400, 400);
         this.canvas.setOnMousePressed(this::handleDraw);
         this.canvas.setOnMouseDragged(this::handleDraw);
-        this.setOnMouseDragReleased(this::resetHandleDraw);
+        this.canvas.setOnMouseMoved(this::handleMoved);
         
-        this.setOnKeyPressed(this::onKeyPressed);
-        this.getChildren().addAll(this.stepButton, this.canvas);
+        Toolbar toolbar = new Toolbar(this);
+
+        this.infoBar = new InfoBar();
+        this.infoBar.setDrawMode(this.drawMode);
+        this.infoBar.setCursorPosition(0, 0);
+
+        Pane spacer = new Pane();
+        spacer.setMinSize(0, 0);
+        spacer.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        VBox.setVgrow(spacer, Priority.ALWAYS);
+
+        this.getChildren().addAll(toolbar, this.canvas, spacer, infoBar);
 
         this.affine = new Affine();
         this.affine.appendScale(400 / 10, 400 /10);
         this.simulation = new Simulation(10, 10);
-        
+
+        this.setOnKeyPressed(this::onKeyPressed);
     }
 
-    private void resetHandleDraw(MouseDragEvent mouseDragEvent) {
-        this.lastCellClicked[0] = -1;
-        this.lastCellClicked[1] = -1;
+    private void handleMoved(MouseEvent mouseEvent) {
+        Point2D simCoord = getSimulationCoordinates(mouseEvent);
+        int simX = (int) simCoord.getX();
+        int simY = (int) simCoord.getY();
+
+        this.infoBar.setCursorPosition(simX, simY);
+    }
+
+    private Point2D getSimulationCoordinates(MouseEvent event) {
+        double mouseX = event.getX();
+        double mouseY = event.getY();
+
+        try {
+            Point2D simCoord = this.affine.inverseTransform(mouseX, mouseY);
+            return simCoord;
+        } catch (NonInvertibleTransformException e) {
+            throw new RuntimeException("Non-invertible transform");
+        }
     }
 
     private void onKeyPressed(KeyEvent keyEvent) {
         if (keyEvent.getCode() == KeyCode.D) {
-            drawMode = 1;
+            drawMode = Simulation.ALIVE;
         } else if(keyEvent.getCode() == KeyCode.E) {
-            drawMode = 0;
+            drawMode = Simulation.DEAD;
         }
     }
 
     private void handleDraw(MouseEvent mouseEvent) {
-        double mouseX = mouseEvent.getX();
-        double mouseY = mouseEvent.getY();
 
-        try {
-            Point2D simCoord = this.affine.inverseTransform(mouseX, mouseY);
-            int simX = (int) simCoord.getX();
-            int simY = (int) simCoord.getY();
-            if (!(lastCellClicked[0] == simX && lastCellClicked[1] == simY)) {
-                this.simulation.setState(simX, simY, drawMode);
-                this.draw();
-                lastCellClicked[0] = simX;
-                lastCellClicked[1] = simY;
-            }
-            System.out.println(simX + ", " + simY);
-        } catch (NonInvertibleTransformException e) {
-            System.out.println("Could not invert transform");
-            e.printStackTrace();
-        }
+        Point2D simCoord = getSimulationCoordinates(mouseEvent);
+        int simX = (int) simCoord.getX();
+        int simY = (int) simCoord.getY();
+
+        this.simulation.setState(simX, simY, drawMode);
+        this.draw();
     }
 
     public void draw() {
@@ -89,7 +97,7 @@ public class MainView extends VBox {
         g.setFill(Color.BLACK);
         for (int x = 0; x < this.simulation.width; x++) {
             for (int y = 0; y < this.simulation.height; y++) {
-                if (this.simulation.getState(x, y) == 1) {
+                if (this.simulation.getState(x, y) == Simulation.ALIVE) {
                     g.fillRect(x, y, 1, 1);
                 }
             }
@@ -105,5 +113,14 @@ public class MainView extends VBox {
             g.strokeLine(0, y, 10, y);
 
         }
+    }
+
+    public Simulation getSimulation() {
+        return this.simulation;
+    }
+
+    public void setDrawMode(int value) {
+        this.drawMode = value;
+        this.infoBar.setDrawMode(value);
     }
 }
