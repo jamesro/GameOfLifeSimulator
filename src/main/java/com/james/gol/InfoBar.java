@@ -1,5 +1,6 @@
-package com.james;
+package com.james.gol;
 
+import com.james.gol.model.CellState;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
@@ -27,9 +28,9 @@ public class InfoBar extends HBox {
         this.getChildren().addAll(this.editingTool, spacer, this.cursor);
     }
 
-    public void setDrawMode(int drawMode) {
+    public void setDrawMode(CellState drawMode) {
 
-        String drawModeString = drawMode == Simulation.ALIVE ? "Draw" : "Erase";
+        String drawModeString = drawMode == CellState.ALIVE ? "Draw" : "Erase";
         this.editingTool.setText(String.format(drawModeFormat, drawModeString));
     }
 

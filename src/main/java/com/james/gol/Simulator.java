@@ -1,4 +1,4 @@
-package com.james;
+package com.james.gol;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
